@@ -28,13 +28,13 @@ Whether you're a professional seeking to document your work, a remote worker mai
 
 ![FullScreenTrack](./resources/icon.ico)
 
-[![GitHub license](https://img.shields.io/github/license/jeffzuo/full-screen-track)](https://github.com/jeffzuo/full-screen-track/blob/main/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/JeffZuo953/full-screen-track)](https://github.com/JeffZuo953/full-screen-track/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![PyQt5](https://img.shields.io/badge/PyQt-5.15+-green.svg)](https://www.riverbankcomputing.com/software/pyqt/)
 [![FFmpeg](https://img.shields.io/badge/FFmpeg-4.0+-red.svg)](https://ffmpeg.org/)
 [![Material Design](https://img.shields.io/badge/Material%20Design-Icons-purple.svg)](https://material.io/design)
 [![SQLite](https://img.shields.io/badge/SQLite-3-blue.svg)](https://www.sqlite.org/)
-[![Downloads](https://img.shields.io/github/downloads/jeffzuo/full-screen-track/total)](https://github.com/jeffzuo/full-screen-track/releases)
+[![Downloads](https://img.shields.io/github/downloads/JeffZuo953/full-screen-track/total)](https://github.com/JeffZuo953/full-screen-track/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 
 
