@@ -1,5 +1,27 @@
-# 🎥 FullScreenTrack 全屏录制工具
+[🌎 English](README.md) | [🀄 简体中文](README_zh.md)
 
+# 🤔 你是否遇到过这些情况？
+
+- 📄 浏览器意外刷新，重要参考资料消失不见
+- 🔍 找不到昨天查看过的文件或视频的位置
+- ⚖️ 遇到劳动纠纷，需要可靠的工作记录证明
+- 📊 月度考核时，难以量化工作成果
+- 📝 远程会议结束后，遗漏重要细节
+- 🎥 制作演示视频时，难以定位错误片段
+
+## 😲 什么是 FullScreenTrack？
+
+FullScreenTrack 是您的专业屏幕活动记录解决方案。它提供：
+
+- 🎯 自动屏幕和音频录制
+- 💾 智能本地存储管理
+- ☁️ 安全云端同步
+- 📊 全面活动日志
+- 🔍 快速内容检索
+- 🛡️ 数据备份保护
+
+
+# 🎥 FullScreenTrack 全屏录制工具
 <div align="center">
 
 ![FullScreenTrack](./resources/icon.ico)
@@ -13,9 +35,11 @@
 [![Downloads](https://img.shields.io/github/downloads/jeffzuo/full-screen-track/total)](https://github.com/jeffzuo/full-screen-track/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 
-[🌎 English](README.md) | [🀄 简体中文](README_zh.md)
 
 </div>
+
+
+无论您是需要记录工作的专业人士，保持工作透明度的远程工作者，还是需要可靠屏幕录制的内容创作者 - FullScreenTrack 都能满足您的需求。
 
 ## ✨ 主要特性
 

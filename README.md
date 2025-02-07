@@ -1,3 +1,27 @@
+[🌎 English](README.md) | [🀄 简体中文](README_zh.md)
+
+# 🤔 Have you encountered these situations?
+
+- 📄 Important reference materials disappear after an accidental browser refresh
+- 🔍 Can't locate yesterday's viewed files or videos in your system
+- ⚖️ Need reliable evidence for work documentation in labor disputes
+- 📊 Struggle to quantify work accomplishments during monthly reviews
+- 📝 Miss important details when reviewing remote meeting content
+- 🎥 Difficulty pinpointing errors in demonstration videos
+
+## 😲 What is FullScreenTrack?
+
+FullScreenTrack is your professional screen activity documentation solution. It provides:
+
+- 🎯 Automatic screen and audio recording
+- 💾 Intelligent local storage management
+- ☁️ Secure cloud synchronization
+- 📊 Comprehensive activity logging
+- 🔍 Quick content retrieval
+- 🛡️ Data backup protection
+
+Whether you're a professional seeking to document your work, a remote worker maintaining accountability, or a content creator needing reliable screen capture - FullScreenTrack has you covered.
+
 # 🎥 FullScreenTrack
 
 <div align="center">
@@ -13,7 +37,6 @@
 [![Downloads](https://img.shields.io/github/downloads/jeffzuo/full-screen-track/total)](https://github.com/jeffzuo/full-screen-track/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 
-[🌎 English](README.md) | [🀄 简体中文](README_zh.md)
 
 </div>
 
@@ -66,7 +89,7 @@ graph TD
         H[File Model]
 
         subgraph Local Storage
-            L[Local Storage]
+            L[Local File]
             DB[(SQlite)]
         end
 
