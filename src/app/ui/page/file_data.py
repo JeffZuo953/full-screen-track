@@ -11,17 +11,17 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QHeaderView,
     QFileDialog,
-    QMessageBox,
     QProgressDialog,
 )
 from PyQt5.QtGui import QPalette, QColor
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QThreadPool
 import pandas as pd
 from datetime import datetime
 from src.app.ui.custom_dialog import CustomDialog
 from src.core.manager.local_file import LocalFileManager
-from src.core.model.service.file_service import FileService  # 新导入
-
+from src.core.model.service.file_service import FileService 
+import os
+from src.core.util.logger import logger
 
 class ExportThread(QThread):
     export_finished = pyqtSignal(str)
@@ -56,6 +56,8 @@ class FileData(QWidget):
         self.local_manager = local_manager
         self.current_page = 1
         self.page_size = 10
+        self.thread_pool = QThreadPool()
+        self.current_worker = None
 
         layout = QVBoxLayout(self)
 
@@ -318,43 +320,87 @@ class FileData(QWidget):
 
     def check_all_files(self):
         """Check if all files in database exist locally"""
-        total_files = self.file_service.get_total_count()
-        progress = QProgressDialog(
-            "Checking all files...", "Cancel", 0, total_files, self
-        )
+        # Create progress dialog
+        progress = QProgressDialog("Checking all files...", "Cancel", 0, 100, self)
+        progress.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)  # Show immediately
+
+        total_files = self.file_service.get_total_count()
+        batch_size = 100
+        processed = 0
 
         page = 1
-        processed = 0
-        updates = []
-
         while True:
-            files = self.file_service.get_files_paginated(page, 100)
+            files = self.file_service.get_files_paginated(page, batch_size)
             if not files:
                 break
 
+            updates = []
             for file in files:
                 if progress.wasCanceled():
                     break
-
-                local_path = file.local_path
-                exists = self.file_service.check_file_exists(local_path)
-                updates.append((exists, local_path))
-
+                exists = os.path.exists(file.local_path)
+                updates.append((exists, file.local_path))
                 processed += 1
-                progress.setValue(processed)
+                progress.setValue(int(processed * 100 / total_files))
+
+            # 批量更新存在状态
+            if updates:
+                self.file_service.batch_update_existence(updates)
 
             if progress.wasCanceled():
                 break
 
-            self.file_service.update_files(updates)
-            updates = []
             page += 1
 
         progress.close()
-        self.load_file_data()  # Refresh current view
+        self.load_file_data()  # Refresh the view
         dialog = CustomDialog("Complete", "All files existence check completed", self)
         dialog.show_information()
+
+    def delete_old_files(self):
+        """Delete local files older than 3 days"""
+        message = (
+            "This will permanently delete all local files older than 3 days.\n"
+            "This operation cannot be undone.\n"
+            "The database records will be kept.\n"
+            "Continue?"
+        )
+        if CustomDialog("Confirm Delete Files", message, self).show_question():
+            progress = QProgressDialog("Deleting old files...", "Cancel", 0, 100, self)
+            progress.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+            progress.setWindowModality(Qt.WindowModality.WindowModal)
+            progress.setMinimumDuration(0)  # Show immediately
+
+            deleted_count = 0
+            failed_count = 0
+            old_files = self.file_service.get_old_files(3)
+            total_files = len(old_files)
+            
+            for i, file in enumerate(old_files):
+                if progress.wasCanceled():
+                    break
+                try:
+                    if os.path.exists(file.local_path):
+                        os.remove(file.local_path)
+                        self.file_service.check_file_exists(file.local_path)
+                        deleted_count += 1
+                        logger.info(f"Deleted old file: {file.local_path}")
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Failed to delete {file.local_path}: {e}")
+                progress.setValue(int((i + 1) * 100 / total_files))
+
+            progress.close()
+            self.load_file_data()  # Refresh the view
+
+            result_message = (
+                f"Successfully deleted {deleted_count} files.\n"
+                f"Failed to delete {failed_count} files."
+            )
+            dialog = CustomDialog("Files Deleted", result_message, self)
+            dialog.show_information()
 
     def clear_old_records(self):
         """Clear records older than 7 days"""
@@ -378,30 +424,4 @@ class FileData(QWidget):
                 f"Successfully deleted {deleted_count} old records.",
                 self,
             )
-            dialog.show_information()
-
-    def delete_old_files(self):
-        """Delete local files older than 3 days"""
-        message = (
-            "This will permanently delete all local files older than 3 days.\n"
-            "This operation cannot be undone.\n"
-            "The database records will be kept.\n"
-            "Continue?"
-        )
-        dialog = CustomDialog("Confirm Delete Files", message, self)
-
-        if dialog.show_question():
-            progress = QProgressDialog("Deleting old files...", "Cancel", 0, 100, self)
-            progress.setWindowModality(Qt.WindowModality.WindowModal)
-
-            deleted_count, failed_count = self.local_manager.delete_old_files(3)
-
-            progress.close()
-            self.load_file_data()  # Refresh the view
-
-            result_message = (
-                f"Successfully deleted {deleted_count} files.\n"
-                f"Failed to delete {failed_count} files."
-            )
-            dialog = CustomDialog("Files Deleted", result_message, self)
             dialog.show_information()

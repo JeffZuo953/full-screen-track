@@ -27,15 +27,12 @@ class UploaderManager:
             try:
                 if not os.path.exists(file.local_path):
                     logger.warning(f"File no longer exists: {file.local_path}")
-                    self.file_service.check_file_exists(file.local_path)
                     continue
 
                 logger.debug(f"Attempting to upload file: {file.local_path} to {file.remote_path}")
                 self.upload_file(file.remote_path, file.local_path)
             except Exception as e:
                 logger.error(Colorizer.red(f"✗ Upload failed for {file.local_path}: {e}"))
-
-        logger.info(Colorizer.green(f"✓ Synced {len(pending_files)} pending files"))
 
     def upload_file(self, remote_path: str, local_path: str) -> None:
         """Upload a single file to the WebDAV server"""
@@ -44,11 +41,5 @@ class UploaderManager:
             logger.info(Colorizer.green(f"✓ Uploaded {local_path}"))
 
     def get_upload_status(self):
-        """Get current upload status with file existence check"""
-        all_status = self.webdav.get_upload_status()
-        # Filter out non-existent files
-        return [
-            status
-            for status in all_status
-            if self.file_service.check_file_exists(status["file"])
-        ]
+        """Get current upload status without checking existence"""
+        return self.webdav.get_upload_status()

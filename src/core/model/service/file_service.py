@@ -24,11 +24,15 @@ class FileService:
         """Get all pending files"""
         return self.file_dao.fetch_pending_files()
 
-    def update_file_status(self, local_path: str, status: str, upload_time: Optional[datetime] = None) -> None:
+    def update_file_status(
+        self, local_path: str, status: str, upload_time: Optional[datetime] = None
+    ) -> None:
         """Update file status"""
         self.file_dao.update_status(local_path, status, upload_time)
 
-    def get_files_paginated(self, page: int, page_size: int, query: str = "") -> List[File]:
+    def get_files_paginated(
+        self, page: int, page_size: int, query: str = ""
+    ) -> List[File]:
         """Get paginated files with optional search"""
         return self.file_dao.fetch_paginated(page, page_size, query)
 
@@ -37,10 +41,12 @@ class FileService:
         return self.file_dao.count_total()
 
     def check_file_exists(self, local_path: str) -> bool:
-        """Check if file exists and update database"""
-        exists = os.path.exists(local_path)
+        """仅检查文件是否存在，不更新数据库"""
+        return os.path.exists(local_path)
+
+    def update_file_existence(self, local_path: str, exists: bool) -> None:
+        """手动更新文件存在状态"""
         self.file_dao.update_existence(local_path, exists)
-        return exists
 
     def batch_update_existence(self, file_paths: List[Tuple[bool, str]]) -> None:
         """Batch update file existence status"""
@@ -63,3 +69,11 @@ class FileService:
             exists = os.path.exists(file.local_path)
             updates.append((exists, file.local_path))
         self.batch_update_existence(updates)
+
+    def update_files(self, file_paths: List[Tuple[bool, str]]) -> None:
+        """Batch update multiple file existence statuses
+
+        Args:
+            file_paths: List of tuples containing (exists, local_path)
+        """
+        self.batch_update_existence(file_paths)
