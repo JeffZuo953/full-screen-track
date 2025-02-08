@@ -27,6 +27,10 @@ class About(QMainWindow):
                 <td style="padding-right: 30px;">Email:</td>
                 <td>jeffordszuo@gmail.com</td>
             </tr>
+            <tr>
+                <td style="padding-right: 30px;">GitHub:</td>
+                <td><a href="https://github.com/JeffZuo953/full-screen-track">https://github.com/JeffZuo953/full-screen-track</a></td>
+            </tr>
         </table>
         """
 

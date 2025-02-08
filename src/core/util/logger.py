@@ -23,7 +23,7 @@ def setup_logger() -> logging.Logger:
     logger = logging.getLogger("full screen tracker")
 
     config_manager = ConfigManager.get_instance()
-    logger.setLevel(logging.INFO)  # Set logger to the lowest level
+    logger.setLevel(config_manager.get_log_config().get("level", logging.INFO).upper())  # Set logger to the lowest level
 
     if not logger.handlers:
         # File handler

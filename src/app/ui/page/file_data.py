@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QFileDialog,
     QProgressDialog,
+    QMessageBox,
 )
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QThreadPool
@@ -19,14 +20,20 @@ import pandas as pd
 from datetime import datetime
 from src.app.ui.custom_dialog import CustomDialog
 from src.core.manager.local_file import LocalFileManager
-from src.core.model.service.file_service import FileService 
+from src.core.model.service.file_service import FileService
 import os
 from src.core.util.logger import logger
+
 
 class ExportThread(QThread):
     export_finished = pyqtSignal(str)
 
-    def __init__(self, file_service: FileService, path, current_page, page_size, export_all=False):
+    def __init__(self,
+                 file_service: FileService,
+                 path,
+                 current_page,
+                 page_size,
+                 export_all=False):
         super().__init__()
         self.file_service = file_service
         self.path = path
@@ -37,19 +44,19 @@ class ExportThread(QThread):
     def run(self):
         if self.export_all:
             files = self.file_service.get_files_paginated(
-                1, self.file_service.get_total_count()
-            )
+                1, self.file_service.get_total_count())
         else:
             files = self.file_service.get_files_paginated(
-                self.current_page, self.page_size
-            )
+                self.current_page, self.page_size)
         df = pd.DataFrame([file.to_dict() for file in files])
         df.to_csv(self.path, index=False)
         self.export_finished.emit(self.path)
 
 
 class FileData(QWidget):
-    def __init__(self, file_service: FileService, local_manager: LocalFileManager):
+
+    def __init__(self, file_service: FileService,
+                 local_manager: LocalFileManager):
         super().__init__()
 
         self.file_service = file_service
@@ -78,8 +85,7 @@ class FileData(QWidget):
         visibility_label = QLabel("Visibility:")
         column_controls_layout.addWidget(visibility_label)
         self.column_checkboxes = []
-        for i, column_name in enumerate(
-            [
+        for i, column_name in enumerate([
                 "ID",
                 "Local Path",
                 "Remote Path",
@@ -89,13 +95,11 @@ class FileData(QWidget):
                 "Upload Time",
                 "Last Check",
                 "Exists Locally",
-            ]
-        ):
+        ]):
             checkbox = QCheckBox(column_name)
             checkbox.setChecked(True)
             checkbox.stateChanged.connect(
-                lambda state, col=i: self.toggle_column(col, state)
-            )
+                lambda state, col=i: self.toggle_column(col, state))
             column_controls_layout.addWidget(checkbox)
             self.column_checkboxes.append(checkbox)
         layout.addLayout(column_controls_layout)
@@ -153,7 +157,8 @@ class FileData(QWidget):
 
         # Add check existence buttons to pagination layout
         self.check_current_button = QPushButton("Check Current Page Files")
-        self.check_current_button.clicked.connect(self.check_current_page_files)
+        self.check_current_button.clicked.connect(
+            self.check_current_page_files)
         pagination_layout.addWidget(self.check_current_button)
 
         self.check_all_button = QPushButton("Check All Files")
@@ -174,34 +179,28 @@ class FileData(QWidget):
 
         # Column width controls
         self.file_table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Interactive
-        )
+            QHeaderView.ResizeMode.Interactive)
 
         self.load_file_data()
 
     def load_file_data(self):
         """Load file data into the table."""
         query = self.search_bar.text()
-        files = self.file_service.get_files_paginated(
-            self.current_page,
-            self.page_size,
-            query
-        )
+        files = self.file_service.get_files_paginated(self.current_page,
+                                                      self.page_size, query)
         self.file_table.setRowCount(len(files))
         self.file_table.setColumnCount(9)
-        self.file_table.setHorizontalHeaderLabels(
-            [
-                "ID",
-                "Local Path",
-                "Remote Path",
-                "File Size",
-                "Last Modified",
-                "Status",
-                "Upload Time",
-                "Last Check",
-                "Exists Locally",
-            ]
-        )
+        self.file_table.setHorizontalHeaderLabels([
+            "ID",
+            "Local Path",
+            "Remote Path",
+            "File Size",
+            "Last Modified",
+            "Status",
+            "Upload Time",
+            "Last Check",
+            "Exists Locally",
+        ])
         for row, file in enumerate(files):
             for col, key in enumerate(file.to_dict()):
                 value = file.to_dict()[key]
@@ -229,7 +228,8 @@ class FileData(QWidget):
 
     def last_page(self):
         total_files = self.file_service.get_total_count()
-        self.current_page = (total_files + self.page_size - 1) // self.page_size
+        self.current_page = (total_files + self.page_size -
+                             1) // self.page_size
         self.page_input.setValue(self.current_page)
         self.load_file_data()
 
@@ -255,15 +255,14 @@ class FileData(QWidget):
     def export_to_csv(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save CSV", f"FullScreenTrackerData_{timestamp}", "CSV Files (*.csv)"
-        )
+            self, "Save CSV", f"FullScreenTrackerData_{timestamp}",
+            "CSV Files (*.csv)")
         if path:
-            self.export_thread = ExportThread(
-                self.file_service, path, self.current_page, self.page_size
-            )
+            self.export_thread = ExportThread(self.file_service, path,
+                                              self.current_page,
+                                              self.page_size)
             self.export_thread.export_finished.connect(
-                self.show_export_finished_message
-            )
+                self.show_export_finished_message)
             self.export_thread.start()
 
     def export_all_to_csv(self):
@@ -283,8 +282,7 @@ class FileData(QWidget):
                 export_all=True,
             )
             self.export_thread.export_finished.connect(
-                self.show_export_finished_message
-            )
+                self.show_export_finished_message)
             self.export_thread.start()
 
     def show_export_finished_message(self, path: str):
@@ -298,31 +296,37 @@ class FileData(QWidget):
     def check_current_page_files(self):
         """Check if files in current page exist locally"""
         rows = self.file_table.rowCount()
-        progress = QProgressDialog("Checking files...", "Cancel", 0, rows, self)
+        progress = QProgressDialog("Checking files...", "Cancel", 0, rows,
+                                   self)
         progress.setWindowModality(Qt.WindowModality.WindowModal)
 
         for row in range(rows):
             if progress.wasCanceled():
                 break
 
-            local_path = self.file_table.item(row, 1).text()  # Local Path column
+            local_path = self.file_table.item(row,
+                                              1).text()  # Local Path column
             exists = self.file_service.check_file_exists(local_path)
 
             item = QTableWidgetItem(str(exists))
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.file_table.setItem(row, 8, item)  # 8 is the Exists Locally column
+            self.file_table.setItem(row, 8,
+                                    item)  # 8 is the Exists Locally column
 
             progress.setValue(row + 1)
 
         progress.close()
-        dialog = CustomDialog("Complete", "File existence check completed", self)
+        dialog = CustomDialog("Complete", "File existence check completed",
+                              self)
         dialog.show_information()
 
     def check_all_files(self):
         """Check if all files in database exist locally"""
         # Create progress dialog
-        progress = QProgressDialog("Checking all files...", "Cancel", 0, 100, self)
-        progress.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+        progress = QProgressDialog("Checking all files...", "Cancel", 0, 100,
+                                   self)
+        progress.setWindowFlags(Qt.WindowType.FramelessWindowHint
+                                | Qt.WindowType.Dialog)
         progress.setWindowModality(Qt.WindowModality.WindowModal)
         progress.setMinimumDuration(0)  # Show immediately
 
@@ -356,7 +360,8 @@ class FileData(QWidget):
 
         progress.close()
         self.load_file_data()  # Refresh the view
-        dialog = CustomDialog("Complete", "All files existence check completed", self)
+        dialog = CustomDialog("Complete",
+                              "All files existence check completed", self)
         dialog.show_information()
 
     def delete_old_files(self):
@@ -365,11 +370,12 @@ class FileData(QWidget):
             "This will permanently delete all local files older than 3 days.\n"
             "This operation cannot be undone.\n"
             "The database records will be kept.\n"
-            "Continue?"
-        )
+            "Continue?")
         if CustomDialog("Confirm Delete Files", message, self).show_question():
-            progress = QProgressDialog("Deleting old files...", "Cancel", 0, 100, self)
-            progress.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+            progress = QProgressDialog("Deleting old files...", "Cancel", 0,
+                                       100, self)
+            progress.setWindowFlags(Qt.WindowType.FramelessWindowHint
+                                    | Qt.WindowType.Dialog)
             progress.setWindowModality(Qt.WindowModality.WindowModal)
             progress.setMinimumDuration(0)  # Show immediately
 
@@ -377,7 +383,7 @@ class FileData(QWidget):
             failed_count = 0
             old_files = self.file_service.get_old_files(3)
             total_files = len(old_files)
-            
+
             for i, file in enumerate(old_files):
                 if progress.wasCanceled():
                     break
@@ -395,21 +401,17 @@ class FileData(QWidget):
             progress.close()
             self.load_file_data()  # Refresh the view
 
-            result_message = (
-                f"Successfully deleted {deleted_count} files.\n"
-                f"Failed to delete {failed_count} files."
-            )
+            result_message = (f"Successfully deleted {deleted_count} files.\n"
+                              f"Failed to delete {failed_count} files.")
             dialog = CustomDialog("Files Deleted", result_message, self)
             dialog.show_information()
 
     def clear_old_records(self):
         """Clear records older than 7 days"""
-        message = (
-            "This will delete all file records older than 7 days.\n"
-            "The local files won't be deleted.\n"
-            "You can delete files manually.\n"
-            "Continue?"
-        )
+        message = ("This will delete all file records older than 7 days.\n"
+                   "The local files won't be deleted.\n"
+                   "You can delete files manually.\n"
+                   "Continue?")
         dialog = CustomDialog(
             "Confirm Delete",
             message,
@@ -418,7 +420,7 @@ class FileData(QWidget):
 
         if dialog.show_question() == QMessageBox.StandardButton.Yes:
             deleted_count = self.file_service.delete_old_records(7)
-            self.load_file_data()  # Refresh the table
+            self.load_file_data()
             dialog = CustomDialog(
                 "Records Deleted",
                 f"Successfully deleted {deleted_count} old records.",

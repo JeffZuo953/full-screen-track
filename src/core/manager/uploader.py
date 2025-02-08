@@ -26,7 +26,7 @@ class UploaderManager:
         for file in pending_files:
             try:
                 if not os.path.exists(file.local_path):
-                    logger.warning(f"File no longer exists: {file.local_path}")
+                    logger.debug(f"File no longer exists: {file.local_path}")
                     continue
 
                 logger.debug(f"Attempting to upload file: {file.local_path} to {file.remote_path}")
