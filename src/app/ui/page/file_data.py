@@ -15,23 +15,20 @@ from PyQt5.QtWidgets import (
     QProgressDialog,
 )
 from PyQt5.QtGui import QPalette, QColor
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QDate
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 import pandas as pd
 from datetime import datetime
-from src.core.model.file import FileModel
-import os
 from src.app.ui.custom_dialog import CustomDialog
 from src.core.manager.local_file import LocalFileManager
+from src.core.model.service.file_service import FileService  # 新导入
 
 
 class ExportThread(QThread):
     export_finished = pyqtSignal(str)
 
-    def __init__(
-        self, file_model: FileModel, path, current_page, page_size, export_all=False
-    ):
+    def __init__(self, file_service: FileService, path, current_page, page_size, export_all=False):
         super().__init__()
-        self.file_model = file_model
+        self.file_service = file_service
         self.path = path
         self.current_page = current_page
         self.page_size = page_size
@@ -39,23 +36,23 @@ class ExportThread(QThread):
 
     def run(self):
         if self.export_all:
-            files = self.file_model.fetch_files_paginated(
-                1, self.file_model.fetch_total_file_count()
+            files = self.file_service.get_files_paginated(
+                1, self.file_service.get_total_count()
             )
         else:
-            files = self.file_model.fetch_files_paginated(
+            files = self.file_service.get_files_paginated(
                 self.current_page, self.page_size
             )
-        df = pd.DataFrame(files)
+        df = pd.DataFrame([file.to_dict() for file in files])
         df.to_csv(self.path, index=False)
         self.export_finished.emit(self.path)
 
 
 class FileData(QWidget):
-    def __init__(self, file_model: FileModel, local_manager: LocalFileManager):
+    def __init__(self, file_service: FileService, local_manager: LocalFileManager):
         super().__init__()
 
-        self.file_model = file_model
+        self.file_service = file_service
         self.local_manager = local_manager
         self.current_page = 1
         self.page_size = 10
@@ -183,10 +180,10 @@ class FileData(QWidget):
     def load_file_data(self):
         """Load file data into the table."""
         query = self.search_bar.text()
-        files = self.file_model.search_files(
-            query,
+        files = self.file_service.get_files_paginated(
             self.current_page,
             self.page_size,
+            query
         )
         self.file_table.setRowCount(len(files))
         self.file_table.setColumnCount(9)
@@ -204,8 +201,8 @@ class FileData(QWidget):
             ]
         )
         for row, file in enumerate(files):
-            for col, key in enumerate(file):
-                value = file[key]
+            for col, key in enumerate(file.to_dict()):
+                value = file.to_dict()[key]
                 item = QTableWidgetItem(str(value))
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.file_table.setItem(row, col, item)
@@ -222,14 +219,14 @@ class FileData(QWidget):
             self.load_file_data()
 
     def next_page(self):
-        total_files = self.file_model.fetch_total_file_count()
+        total_files = self.file_service.get_total_count()
         if self.current_page * self.page_size < total_files:
             self.current_page += 1
             self.page_input.setValue(self.current_page)
             self.load_file_data()
 
     def last_page(self):
-        total_files = self.file_model.fetch_total_file_count()
+        total_files = self.file_service.get_total_count()
         self.current_page = (total_files + self.page_size - 1) // self.page_size
         self.page_input.setValue(self.current_page)
         self.load_file_data()
@@ -260,7 +257,7 @@ class FileData(QWidget):
         )
         if path:
             self.export_thread = ExportThread(
-                self.file_model, path, self.current_page, self.page_size
+                self.file_service, path, self.current_page, self.page_size
             )
             self.export_thread.export_finished.connect(
                 self.show_export_finished_message
@@ -277,7 +274,7 @@ class FileData(QWidget):
         )
         if path:
             self.export_thread = ExportThread(
-                self.file_model,
+                self.file_service,
                 path,
                 self.current_page,
                 self.page_size,
@@ -307,8 +304,7 @@ class FileData(QWidget):
                 break
 
             local_path = self.file_table.item(row, 1).text()  # Local Path column
-            exists = os.path.exists(local_path)
-            self.file_model.update_file_existence(local_path, exists)
+            exists = self.file_service.check_file_exists(local_path)
 
             item = QTableWidgetItem(str(exists))
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
@@ -322,7 +318,7 @@ class FileData(QWidget):
 
     def check_all_files(self):
         """Check if all files in database exist locally"""
-        total_files = self.file_model.fetch_total_file_count()
+        total_files = self.file_service.get_total_count()
         progress = QProgressDialog(
             "Checking all files...", "Cancel", 0, total_files, self
         )
@@ -333,7 +329,7 @@ class FileData(QWidget):
         updates = []
 
         while True:
-            files = self.file_model.fetch_files_paginated(page, 100)
+            files = self.file_service.get_files_paginated(page, 100)
             if not files:
                 break
 
@@ -341,8 +337,8 @@ class FileData(QWidget):
                 if progress.wasCanceled():
                     break
 
-                local_path = file["local_path"]
-                exists = os.path.exists(local_path)
+                local_path = file.local_path
+                exists = self.file_service.check_file_exists(local_path)
                 updates.append((exists, local_path))
 
                 processed += 1
@@ -351,7 +347,7 @@ class FileData(QWidget):
             if progress.wasCanceled():
                 break
 
-            self.file_model.update_files(updates)
+            self.file_service.update_files(updates)
             updates = []
             page += 1
 
@@ -375,7 +371,7 @@ class FileData(QWidget):
         )
 
         if dialog.show_question() == QMessageBox.StandardButton.Yes:
-            deleted_count = self.file_model.delete_old_records(7)
+            deleted_count = self.file_service.delete_old_records(7)
             self.load_file_data()  # Refresh the table
             dialog = CustomDialog(
                 "Records Deleted",

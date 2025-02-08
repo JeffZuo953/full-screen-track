@@ -148,7 +148,7 @@ class MainWindow(QMainWindow):
 
         self.config_editor = ConfigEditor()
         self.file_data = FileData(
-            app_controller.file_model, app_controller.local_file_manager
+            app_controller.file_service, app_controller.local_file_manager
         )
         self.log = Log()
         self.about = About()

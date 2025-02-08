@@ -11,7 +11,7 @@ from src.core.manager.config import ConfigManager
 from src.core.manager.recorder import RecorderManager
 from src.core.manager.local_file import LocalFileManager
 from src.core.manager.uploader import UploaderManager
-from src.core.model.file import FileModel
+from src.core.model.service.file_service import FileService
 from src.core.util.logger import logger
 from src.core.util.monitor_lock_screen import create_screen_lock_monitor_thread
 
@@ -24,7 +24,7 @@ class AppController:
         self.local_file_manager: Optional[LocalFileManager] = None
         self.uploader_manager: Optional[UploaderManager] = None
         self.config: Optional[ConfigManager] = None
-        self.file_model: Optional[FileModel] = None
+        self.file_service: Optional[FileService] = None
         self.is_gui_mode: bool = False
         self.is_polling: bool = False
         self.is_recording: bool = False
@@ -49,9 +49,9 @@ class AppController:
         logger.debug("Initializing components")
         try:
             # Initialize FileModel, LocalFileManager, and UploaderManager
-            self.file_model = FileModel(db_path="db/file_tracker.db")
-            self.local_file_manager = LocalFileManager(self.config, self.file_model)
-            self.uploader_manager = UploaderManager(self.config, self.file_model)
+            self.file_service = FileService(db_path="db/file_tracker.db")
+            self.local_file_manager = LocalFileManager(self.config, self.file_service)
+            self.uploader_manager = UploaderManager(self.config, self.file_service)
 
             # Initialize the recorder manager
             self.recorder_manager = RecorderManager(self.config)

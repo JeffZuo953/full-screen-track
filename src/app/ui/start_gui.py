@@ -12,7 +12,7 @@ def start_gui(app_controller: AppController) -> None:
     """Main entry point for the application"""
     # Set app ID for Windows taskbar
     if sys.platform == "win32":
-        myappid = "mycompany.fullscreentracer.1.0"
+        myappid = "jeffzuo953.fullscreentracer.1.0.0"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     app = QApplication([])

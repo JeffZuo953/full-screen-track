@@ -4,10 +4,8 @@ import time
 from typing import Dict, List
 
 from src.core.util.logger import logger
-
-
-from src.core.model.file import FileModel
 from src.core.manager.config import ConfigManager
+from src.core.model.service.file_service import FileService  # 新导入
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -37,9 +35,9 @@ class RecordingFileHandler(FileSystemEventHandler):
 class LocalFileManager:
     """Handles file monitoring and database updates locally"""
 
-    def __init__(self, config: ConfigManager, file_model: FileModel):
+    def __init__(self, config: ConfigManager, file_service: FileService):
         self.config = config
-        self.file_model = file_model
+        self.file_service = file_service  # 更改为 file_service
         self.db_path = "db/file_tracker.db"
         self._setup_file_watcher()
 
@@ -82,7 +80,7 @@ class LocalFileManager:
 
                 if self._should_process_file(file_info):
                     new_files.append(file_info)
-                    self.file_model.insert_or_update_file(file_info)
+                    self.file_service.register_file(file_info)
 
         logger.debug(f"Found {len(new_files)} new or modified files")
         return new_files
@@ -108,16 +106,16 @@ class LocalFileManager:
         logger.debug(
             f"Determining if file {file_info['local_path']} should be processed"
         )
-        record = self.file_model.fetch_file(file_info["local_path"])
+        record = self.file_service.get_file(file_info["local_path"])
 
         # If file exists but was marked as non-existent, update its status
-        if record and not record["exists_locally"]:
-            self.file_model.update_file_existence(file_info["local_path"], True)
+        if record and not record.exists_locally:
+            self.file_service.check_file_exists(file_info["local_path"])
 
         if not record:
             return True
 
-        return record["status"] != "uploaded"
+        return record.status != "uploaded"
 
     def delete_old_files(self, days: int) -> tuple[int, int]:
         """Delete local files older than specified days
@@ -131,18 +129,17 @@ class LocalFileManager:
         deleted_count = 0
         failed_count = 0
         
-        old_files = self.file_model.fetch_old_files(days)
+        old_files = self.file_service.get_old_files(days)
         for file in old_files:
             try:
-                local_path = file['local_path']
-                if os.path.exists(local_path):
-                    os.remove(local_path)
-                    self.file_model.update_file_existence(local_path, False)
+                if os.path.exists(file.local_path):
+                    os.remove(file.local_path)
+                    self.file_service.check_file_exists(file.local_path)
                     deleted_count += 1
-                    logger.info(f"Deleted old file: {local_path}")
+                    logger.info(f"Deleted old file: {file.local_path}")
             except Exception as e:
                 failed_count += 1
-                logger.error(f"Failed to delete {local_path}: {e}")
+                logger.error(f"Failed to delete {file.local_path}: {e}")
                 
         return deleted_count, failed_count
 
