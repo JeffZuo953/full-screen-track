@@ -1,3 +1,4 @@
+import os
 import sys
 import ctypes
 from PyQt5.QtWidgets import QApplication
@@ -10,24 +11,35 @@ from src.core.controller.app import AppController
 def start_gui(app_controller: AppController) -> None:
     """Main entry point for the application"""
     # Set app ID for Windows taskbar
-    if sys.platform == 'win32':
-        myappid = 'mycompany.fullscreentracer.1.0'
+    if sys.platform == "win32":
+        myappid = "mycompany.fullscreentracer.1.0"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-    
+
     app = QApplication([])
-    
-    # Set icon for all windows and taskbar
-    icon = QIcon("src/app/ui/resources/icon.ico")
+
+    # Get the correct resource path whether running from source or frozen executable
+    if getattr(sys, "frozen", False):
+        # Running in PyInstaller bundle
+        application_path = sys._MEIPASS
+    else:
+        # Running in normal Python environment
+        application_path = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        )
+
+    # Set icon path using absolute path
+    icon_path = os.path.join(application_path, "resources", "icon.ico")
+    icon = QIcon(icon_path)
     app.setWindowIcon(icon)
-    
+
     # Set application properties
     app.setQuitOnLastWindowClosed(False)
-    
+
     mainWin = MainWindow(app_controller)
     apply_stylesheet(app, theme="dark_lightgreen.xml")
-    
+
     # Ensure taskbar icon shows up
-    if sys.platform == 'win32':
+    if sys.platform == "win32":
         # Force Windows to use the icon
         mainWin.setWindowIcon(icon)
         # Set icon for window handle
@@ -37,5 +49,5 @@ def start_gui(app_controller: AppController) -> None:
             window.setIcon(icon)
     else:
         mainWin.show()
-    
+
     sys.exit(app.exec_())

@@ -1,4 +1,5 @@
 # src/core/manager/app_controller.py
+import threading
 from src.core.util.logger import logger
 
 import sys
@@ -12,6 +13,7 @@ from src.core.manager.local_file import LocalFileManager
 from src.core.manager.uploader import UploaderManager
 from src.core.model.file import FileModel
 from src.core.util.logger import logger
+from src.core.util.monitor_lock_screen import create_screen_lock_monitor_thread
 
 
 class AppController:
@@ -26,6 +28,11 @@ class AppController:
         self.is_gui_mode: bool = False
         self.is_polling: bool = False
         self.is_recording: bool = False
+        self.is_locked: bool = False  # Add a flag to track lock state
+        self.polling_thread: Optional[threading.Thread] = None  # Add polling thread
+        self.lock_monitor_thread: Optional[threading.Thread] = (
+            None  # lock_monitor thread
+        )
 
     def setup_config(self) -> None:
         """Initialize the configuration"""
@@ -78,12 +85,18 @@ class AppController:
         """Start upload polling"""
         logger.info("Starting upload polling...")
         self.is_polling = True
-        self.poll_and_sync()
+        if not self.polling_thread or not self.polling_thread.is_alive():
+            self.polling_thread = threading.Thread(
+                target=self.poll_and_sync, daemon=True
+            )
+            self.polling_thread.start()
 
     def stop_polling(self) -> None:
         """Stop upload polling"""
         logger.info("Stopping upload polling...")
         self.is_polling = False
+        if self.polling_thread and self.polling_thread.is_alive():
+            self.polling_thread.join(timeout=1)  # Wait for a short time.
 
     def cleanup(self) -> None:
         """Clean up resources"""
@@ -91,22 +104,19 @@ class AppController:
         self.stop_polling()
         logger.debug("AppController: cleanup completed")
 
-    def start_polling(self) -> None:
-        """Start polling for new files and upload them"""
-        self.poll_and_sync()
-
     def poll_and_sync(self) -> None:
         """Poll for new files and upload them"""
-        while True:
+        while self.is_polling:  # Use the flag to control the loop
             try:
-                logger.info(
-                    Colorizer.cyan(f"Polling for new files at {datetime.now()}...")
-                )
-                self.scan_and_sync()
-                sleep(self.config.get_segment_duration())
+                if not self.is_locked:  # only when not locked
+                    logger.info(
+                        Colorizer.cyan(f"Polling for new files at {datetime.now()}...")
+                    )
+                    self.scan_and_sync()
+                    sleep(min(300, self.config.get_segment_duration()))
             except Exception as e:
                 logger.error(Colorizer.red(f"✗ Polling error: {e}"))
-                sleep(30)  # Wait before retry
+                sleep(30)
 
     def manual_upload(self) -> None:
         """Manually trigger file synchronization"""
@@ -131,3 +141,22 @@ class AppController:
             Colorizer.yellow("Received termination signal, cleaning up resources...")
         )
         self.cleanup()
+
+    def _handle_lock_screen(self, is_locked: bool) -> None:
+        """Handle lock screen events."""
+        self.is_locked = is_locked
+        if is_locked:
+            logger.info("Screen locked. Stopping recording and polling.")
+            self.stop_recording()
+            self.stop_polling()
+        else:
+            logger.info("Screen unlocked. Starting recording and polling.")
+            self.start_recording()
+            self.start_polling()
+
+    def start_lock_monitor_thread(self) -> None:
+        """Start screen lock monitoring."""
+        if not self.lock_monitor_thread:
+            self.lock_monitor_thread = create_screen_lock_monitor_thread(
+                self._handle_lock_screen
+            )

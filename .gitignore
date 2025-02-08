@@ -74,3 +74,6 @@ ENV/
 # Temporary files
 *.tmp
 tmp/
+
+
+test/

@@ -31,6 +31,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.app_controller = app_controller
 
+
         # Get the application's root directory
         if getattr(sys, 'frozen', False):
             # Running in PyInstaller bundle
