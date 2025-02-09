@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from time import sleep
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -21,27 +23,27 @@ class Home(QMainWindow):
     """
     The main page of the application, providing controls for recording and uploading.
     """
-    record_state_changed = pyqtSignal(bool)  # Add signal for record state
-    upload_state_changed = pyqtSignal(bool)  # Add signal for upload state
+    record_state_changed: pyqtSignal = pyqtSignal(bool)  # Add signal for record state
+    upload_state_changed: pyqtSignal = pyqtSignal(bool)  # Add signal for upload state
 
-    def __init__(self, app_controller: AppController):
+    def __init__(self, app_controller: AppController) -> None:
         """
         Initializes the Home page with the application controller and sets up the UI.
         """
         super().__init__()
 
-        self.app_controller = app_controller
+        self.app_controller: AppController = app_controller
         self.setup_ui()
         # Thread management
-        self.record_thread = None
-        self.upload_thread = None
-        self.polling_thread = None  # New thread for polling
+        self.record_thread: QThread | None = None
+        self.upload_thread: QThread | None = None
+        self.polling_thread: QThread | None = None  # New thread for polling
 
         # Switch states
-        self.is_recording = False
-        self.is_auto_upload = False
+        self.is_recording: bool = False
+        self.is_auto_upload: bool = False
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         """
         Configures the user interface elements and their layout.
         """
@@ -49,46 +51,46 @@ class Home(QMainWindow):
         self.setMinimumSize(400, 300)
 
         # Create main widget and layout
-        main_widget = QWidget()
+        main_widget: QWidget = QWidget()
         self.setCentralWidget(main_widget)
-        layout = QGridLayout(main_widget)
+        layout: QGridLayout = QGridLayout(main_widget)
 
-        vline = QFrame()
+        vline: QFrame = QFrame()
         vline.setFrameShape(QFrame.Shape.VLine)
         vline.setFrameShadow(QFrame.Shadow.Sunken)
 
-        hline = QFrame()
+        hline: QFrame = QFrame()
         hline.setFrameShape(QFrame.Shape.HLine)
         hline.setFrameShadow(QFrame.Shadow.Sunken)
 
         # Create and configure UI elements
-        self.start_button = QPushButton("Start All")
-        self.stop_button = QPushButton("Stop All")
-        self.upload_once_button = QPushButton("Upload Once")
-        self.abort_upload_button = QPushButton("Abort Upload")
+        self.start_button: QPushButton = QPushButton("Start All")
+        self.stop_button: QPushButton = QPushButton("Stop All")
+        self.upload_once_button: QPushButton = QPushButton("Upload Once")
+        self.abort_upload_button: QPushButton = QPushButton("Abort Upload")
 
         self.stop_button.setEnabled(False)
         self.abort_upload_button.setEnabled(False)
 
         # Create horizontal layouts for each checkbox row
-        record_layout = QHBoxLayout()
-        record_label = QLabel("On Record")
+        record_layout: QHBoxLayout = QHBoxLayout()
+        record_label: QLabel = QLabel("On Record")
         record_label.setFixedWidth(80)
-        self.record_switch = QCheckBox()
+        self.record_switch: QCheckBox = QCheckBox()
         record_layout.addWidget(record_label)
         record_layout.addWidget(self.record_switch)
         record_layout.addStretch()
 
-        upload_layout = QHBoxLayout()
-        upload_label = QLabel("Auto Upload")
+        upload_layout: QHBoxLayout = QHBoxLayout()
+        upload_label: QLabel = QLabel("Auto Upload")
         upload_label.setFixedWidth(80)
-        self.auto_upload_switch = QCheckBox()
+        self.auto_upload_switch: QCheckBox = QCheckBox()
         upload_layout.addWidget(upload_label)
         upload_layout.addWidget(self.auto_upload_switch)
         upload_layout.addStretch()
 
-        self.thread_table = ThreadTable(self.app_controller)
-        self.upload_process = UploadProgress(self.app_controller)
+        self.thread_table: ThreadTable = ThreadTable(self.app_controller)
+        self.upload_process: UploadProgress = UploadProgress(self.app_controller)
 
         # Add widgets to main layout with adjusted row spans
         layout.addLayout(record_layout, 0, 0, 1, 2)
@@ -118,7 +120,7 @@ class Home(QMainWindow):
         self.upload_once_button.clicked.connect(self.on_upload_once)
         self.abort_upload_button.clicked.connect(self.on_abort_upload_once)
 
-    def on_record_switch_change(self, state):
+    def on_record_switch_change(self, state: int) -> None:
         """
         Handles the record switch state change to start or stop recording.
         """
@@ -137,7 +139,7 @@ class Home(QMainWindow):
             self.handle_error(str(e), "record_switch")
         self.update_button_states()
 
-    def on_auto_upload_switch_change(self, state):
+    def on_auto_upload_switch_change(self, state: int) -> None:
         """
         Handles the auto upload switch state change to start or stop polling.
         """
@@ -165,12 +167,12 @@ class Home(QMainWindow):
             self.handle_error(str(e), "polling_thread")
         self.update_button_states()
 
-    def update_button_states(self):
+    def update_button_states(self) -> None:
         """
         Updates the enabled state of the buttons based on the switch states.
         """
-        record_on = self.record_switch.isChecked()
-        upload_on = self.auto_upload_switch.isChecked()
+        record_on: bool = self.record_switch.isChecked()
+        upload_on: bool = self.auto_upload_switch.isChecked()
 
         if not record_on and not upload_on:
             # Both off - only enable Start
@@ -185,7 +187,7 @@ class Home(QMainWindow):
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(True)
 
-    def on_start(self):
+    def on_start(self) -> None:
         """
         Starts recording and/or uploading based on switch states.
         """
@@ -194,7 +196,7 @@ class Home(QMainWindow):
         self.update_button_states()
         logger.info(f"Started Recoring")
 
-    def on_stop(self):
+    def on_stop(self) -> None:
         """
         Stops all operations.
         """
@@ -204,7 +206,7 @@ class Home(QMainWindow):
         self.update_button_states()
         logger.info("All operations stopped")
 
-    def on_upload_once(self):
+    def on_upload_once(self) -> None:
         """
         Triggers one-time upload.
         """
@@ -219,14 +221,14 @@ class Home(QMainWindow):
             self.upload_once_button.setEnabled(False)
             self.abort_upload_button.setEnabled(True)
 
-    def _on_upload_once_complete(self):
+    def _on_upload_once_complete(self) -> None:
         """
         Callback function when one-time upload is complete.
         """
         self.upload_once_button.setEnabled(True)
         self.abort_upload_button.setEnabled(False)
 
-    def on_abort_upload_once(self):
+    def on_abort_upload_once(self) -> None:
         """
         Aborts one-time upload.
         """
@@ -235,14 +237,14 @@ class Home(QMainWindow):
             self.upload_thread.wait()
             self._on_upload_once_complete()
 
-    def _on_upload_once_error(self, message):
+    def _on_upload_once_error(self, message: str) -> None:
         """
         Callback function when one-time upload encounters an error.
         """
         self.handle_error(message, "upload once")
         self.upload_once_button.setEnabled(True)
 
-    def handle_error(self, error_msg, name=""):
+    def handle_error(self, error_msg: str, name: str = "") -> None:
         """
         Handles errors and logs them.
         """
@@ -253,16 +255,16 @@ class UploadPollingThread(QThread):
     """
     Thread for running the upload polling process.
     """
-    error = pyqtSignal(str)
+    error: pyqtSignal = pyqtSignal(str)
 
-    def __init__(self, app_controller: AppController):
+    def __init__(self, app_controller: AppController) -> None:
         """
         Initializes the thread with the application controller.
         """
         super().__init__()
-        self.app_controller = app_controller
+        self.app_controller: AppController = app_controller
 
-    def run(self):
+    def run(self) -> None:
         """
         Runs the upload polling process.
         """
@@ -276,16 +278,16 @@ class UploadThread(QThread):
     """
     Thread for running the manual upload process.
     """
-    error = pyqtSignal(str)
+    error: pyqtSignal = pyqtSignal(str)
 
-    def __init__(self, app_controller: AppController):
+    def __init__(self, app_controller: AppController) -> None:
         """
         Initializes the thread with the application controller.
         """
         super().__init__()
-        self.app_controller = app_controller
+        self.app_controller: AppController = app_controller
 
-    def run(self):
+    def run(self) -> None:
         """
         Runs the manual upload process.
         """

@@ -1,16 +1,20 @@
+from __future__ import annotations
+
 from src.core.controller.app import AppController
+from typing import Optional
+
 
 class AppControllerSingleton:
-    _instance = None
+    _instance: Optional[AppControllerSingleton] = None
 
-    def __new__(cls):
+    def __new__(cls) -> AppControllerSingleton:
         if cls._instance is None:
             cls._instance = super(AppControllerSingleton, cls).__new__(cls)
             cls._instance.initialize()
-        return cls._instance 
+        return cls._instance
 
-    def initialize(self):
-        self.app_controller = AppController()
+    def initialize(self) -> None:
+        self.app_controller: AppController = AppController()
 
-    def get_app_controller(self):
+    def get_app_controller(self) -> AppController:
         return self.app_controller

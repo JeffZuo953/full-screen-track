@@ -1,15 +1,20 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QMainWindow
+from __future__ import annotations
+
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit
 from PyQt5.QtCore import Qt
 
-class About(QMainWindow):
-    def __init__(self):
+
+class About(QWidget):  # Inherit from QWidget, not QMainWindow
+    """A simple 'About' page displaying application information."""
+
+    def __init__(self) -> None:
+        """Initializes the About page."""
         super().__init__()
 
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        layout = QVBoxLayout(main_widget)
+        # Use self as the main widget, no need for a central widget in QWidget
+        layout: QVBoxLayout = QVBoxLayout(self)
 
-        about_text = """
+        about_text: str = """
         <table style="border-collapse: collapse;">
             <tr>
                 <td style="padding-right: 30px;">Full Screen Tracer:</td>
@@ -34,7 +39,7 @@ class About(QMainWindow):
         </table>
         """
 
-        about_text_edit = QTextEdit(self)
+        about_text_edit: QTextEdit = QTextEdit(self)
         about_text_edit.setHtml(about_text)
         about_text_edit.setReadOnly(True)
         about_text_edit.setStyleSheet("""

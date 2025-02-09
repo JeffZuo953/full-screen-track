@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -7,24 +10,33 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QAbstractItemView,
 )
-from PyQt5.QtCore import QTimer, Qt
 
 from src.core.controller.app import AppController
 
 
 class ThreadTable(QWidget):
-    def __init__(self, app_controller: AppController):
+    """
+    A table widget to display information about running threads.
+    """
+
+    def __init__(self, app_controller: AppController) -> None:
+        """
+        Initializes the ThreadTable with the application controller.
+        """
         super().__init__()
-        self.app_controller = app_controller
+        self.app_controller: AppController = app_controller
         self.setup_ui()
         self.setup_timer()
 
-    def setup_ui(self):
-        layout = QVBoxLayout()
+    def setup_ui(self) -> None:
+        """
+        Sets up the user interface elements and their layout.
+        """
+        layout: QVBoxLayout = QVBoxLayout()
         self.setLayout(layout)
 
         # Create table widget
-        self.table = QTableWidget()
+        self.table: QTableWidget = QTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["PID", "Runtime", "Output"])
         self.table.horizontalHeader().setSectionResizeMode(
@@ -34,19 +46,25 @@ class ThreadTable(QWidget):
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         # Set title
-        title = QLabel("Current Record Processed")
+        title: QLabel = QLabel("Current Record Processed")
         title.setStyleSheet("font-weight: bold; font-size: 14px;")
 
         layout.addWidget(title)
         layout.addWidget(self.table)
 
-    def setup_timer(self):
-        self.update_timer = QTimer()
+    def setup_timer(self) -> None:
+        """
+        Sets up a timer to refresh the table periodically.
+        """
+        self.update_timer: QTimer = QTimer()
         self.update_timer.timeout.connect(self.refresh_table)
         self.update_timer.start(1000)  # Update every second
 
-    def refresh_table(self):
-        processes = self.app_controller.recorder_manager.list_processes()
+    def refresh_table(self) -> None:
+        """
+        Refreshes the table with the latest process information.
+        """
+        processes: list[dict] = self.app_controller.recorder_manager.list_processes()
         self.table.setRowCount(len(processes))
 
         for row, process in enumerate(processes):

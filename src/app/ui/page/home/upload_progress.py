@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -5,30 +8,39 @@ from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
-    QAbstractItemView
+    QAbstractItemView,
 )
-from PyQt5.QtCore import QTimer, Qt
 
 from src.core.controller.app import AppController
 
 
 class UploadProgress(QWidget):
-    def __init__(self, app_controller: AppController):
+    """
+    A widget to display the progress of ongoing file uploads.
+    """
+
+    def __init__(self, app_controller: AppController) -> None:
+        """
+        Initializes the UploadProgress widget with the application controller.
+        """
         super().__init__()
-        self.app_controller = app_controller
+        self.app_controller: AppController = app_controller
         self.setup_ui()
         self.setup_timer()
 
-    def setup_ui(self):
-        layout = QVBoxLayout(self)
+    def setup_ui(self) -> None:
+        """
+        Sets up the user interface elements and their layout.
+        """
+        layout: QVBoxLayout = QVBoxLayout(self)
 
         # Add title
-        title = QLabel("Current Uploading Files")
+        title: QLabel = QLabel("Current Uploading Files")
         title.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(title)
 
         # Create table
-        self.table = QTableWidget()
+        self.table: QTableWidget = QTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["File", "Progress", "Status"])
         self.table.horizontalHeader().setSectionResizeMode(
@@ -39,17 +51,25 @@ class UploadProgress(QWidget):
 
         layout.addWidget(self.table)
 
-    def setup_timer(self):
-        self.update_timer = QTimer()
+    def setup_timer(self) -> None:
+        """
+        Sets up a timer to refresh the upload progress table periodically.
+        """
+        self.update_timer: QTimer = QTimer()
         self.update_timer.timeout.connect(self.refresh_table)
         self.update_timer.start(1000)  # Update every second
 
-    def refresh_table(self):
+    def refresh_table(self) -> None:
+        """
+        Refreshes the table with the latest upload progress information.
+        """
         # Get filtered status (non-existent files already removed)
-        upload_status = self.app_controller.uploader_manager.get_upload_status()
+        upload_status: list[dict] = (
+            self.app_controller.uploader_manager.get_upload_status()
+        )
 
         # Filter out completed uploads and keep only active ones
-        active_uploads = [
+        active_uploads: list[dict] = [
             item
             for item in upload_status
             if item["status"] not in ("completed", "failed")
@@ -59,7 +79,7 @@ class UploadProgress(QWidget):
         active_uploads.sort(key=lambda x: float(x["progress"]), reverse=True)
 
         # Only show first 6 items
-        display_uploads = active_uploads[:6]
+        display_uploads: list[dict] = active_uploads[:6]
 
         self.table.setRowCount(len(display_uploads))
 
