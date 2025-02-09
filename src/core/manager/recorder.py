@@ -135,7 +135,7 @@ class RecorderManager:
 
         if os.path.exists(tmp_path):
             for file in os.listdir(tmp_path):
-                if file.endswith((".mp4", ".wav")):
+                if file.endswith((".mp4", ".mp3")):
                     temp_file = os.path.join(tmp_path, file)
                     self._move_completed_recording(temp_file, device_path)
 

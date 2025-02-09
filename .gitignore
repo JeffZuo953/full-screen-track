@@ -61,6 +61,7 @@ $RECYCLE.BIN/
 # Project specific
 *.mp4
 *.wav
+*.mp3
 *.db
 *.sqlite
 *.sqlite3

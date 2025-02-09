@@ -18,10 +18,16 @@ from src.app.app_controller_singleton import AppController
 
 
 class Home(QMainWindow):
+    """
+    The main page of the application, providing controls for recording and uploading.
+    """
     record_state_changed = pyqtSignal(bool)  # Add signal for record state
     upload_state_changed = pyqtSignal(bool)  # Add signal for upload state
 
     def __init__(self, app_controller: AppController):
+        """
+        Initializes the Home page with the application controller and sets up the UI.
+        """
         super().__init__()
 
         self.app_controller = app_controller
@@ -36,6 +42,9 @@ class Home(QMainWindow):
         self.is_auto_upload = False
 
     def setup_ui(self):
+        """
+        Configures the user interface elements and their layout.
+        """
         self.setWindowTitle("Run Page")
         self.setMinimumSize(400, 300)
 
@@ -110,17 +119,14 @@ class Home(QMainWindow):
         self.abort_upload_button.clicked.connect(self.on_abort_upload_once)
 
     def on_record_switch_change(self, state):
-        """Handle record switch state change"""
+        """
+        Handles the record switch state change to start or stop recording.
+        """
         try:
-            logger.debug(f"Record switch state changed: {state}")
             if state == Qt.CheckState.Checked:
-                if not self.app_controller.is_recording:
-                    self.app_controller.start_recording()
-                    logger.debug("Recording started")
+                self.app_controller.start_recording()
             else:
-                if self.app_controller.is_recording:
-                    self.app_controller.stop_recording()
-                    logger.debug("Recording stopped")
+                self.app_controller.stop_recording()
             # Sync tray menu state
             window = self.parent().parent()
             if hasattr(window, '_update_record_icon'):
@@ -128,14 +134,13 @@ class Home(QMainWindow):
             # Emit signal
             self.record_state_changed.emit(state == Qt.CheckState.Checked)
         except Exception as e:
-            logger.error(f"Error in record switch: {e}")
-            # Reset switch state to match actual recording state
-            self.record_switch.setChecked(self.app_controller.is_recording)
-            self.handle_error(str(e), "record_thread")
+            self.handle_error(str(e), "record_switch")
         self.update_button_states()
 
     def on_auto_upload_switch_change(self, state):
-        """Handle auto upload switch state change"""
+        """
+        Handles the auto upload switch state change to start or stop polling.
+        """
         try:
             if state == Qt.CheckState.Checked:
                 if not self.polling_thread or not self.polling_thread.isRunning():
@@ -161,6 +166,9 @@ class Home(QMainWindow):
         self.update_button_states()
 
     def update_button_states(self):
+        """
+        Updates the enabled state of the buttons based on the switch states.
+        """
         record_on = self.record_switch.isChecked()
         upload_on = self.auto_upload_switch.isChecked()
 
@@ -178,14 +186,18 @@ class Home(QMainWindow):
             self.stop_button.setEnabled(True)
 
     def on_start(self):
-        """Start recording and/or uploading based on switch states"""
+        """
+        Starts recording and/or uploading based on switch states.
+        """
         self.record_switch.setChecked(True)
         self.auto_upload_switch.setChecked(True)
         self.update_button_states()
         logger.info(f"Started Recoring")
 
     def on_stop(self):
-        """Stop all operations"""
+        """
+        Stops all operations.
+        """
         logger.info("Stopping all operations")
         self.record_switch.setChecked(False)
         self.auto_upload_switch.setChecked(False)
@@ -193,7 +205,9 @@ class Home(QMainWindow):
         logger.info("All operations stopped")
 
     def on_upload_once(self):
-        """Trigger one-time upload"""
+        """
+        Triggers one-time upload.
+        """
 
         if not self.upload_thread or not self.upload_thread.isRunning():
             self.upload_thread = UploadThread(self.app_controller)
@@ -206,34 +220,52 @@ class Home(QMainWindow):
             self.abort_upload_button.setEnabled(True)
 
     def _on_upload_once_complete(self):
+        """
+        Callback function when one-time upload is complete.
+        """
         self.upload_once_button.setEnabled(True)
         self.abort_upload_button.setEnabled(False)
 
     def on_abort_upload_once(self):
+        """
+        Aborts one-time upload.
+        """
         if self.upload_thread and self.upload_thread.isRunning():
             self.upload_thread.terminate()
             self.upload_thread.wait()
             self._on_upload_once_complete()
 
     def _on_upload_once_error(self, message):
+        """
+        Callback function when one-time upload encounters an error.
+        """
         self.handle_error(message, "upload once")
         self.upload_once_button.setEnabled(True)
 
-    def clean_up(self):
-        self.app_controller.cleanup()
-
     def handle_error(self, error_msg, name=""):
+        """
+        Handles errors and logs them.
+        """
         logger.error(f"{name} Thread error: {error_msg}")
 
 
 class UploadPollingThread(QThread):
+    """
+    Thread for running the upload polling process.
+    """
     error = pyqtSignal(str)
 
     def __init__(self, app_controller: AppController):
+        """
+        Initializes the thread with the application controller.
+        """
         super().__init__()
         self.app_controller = app_controller
 
     def run(self):
+        """
+        Runs the upload polling process.
+        """
         try:
             self.app_controller.start_polling()
         except Exception as e:
@@ -241,13 +273,22 @@ class UploadPollingThread(QThread):
 
 
 class UploadThread(QThread):
+    """
+    Thread for running the manual upload process.
+    """
     error = pyqtSignal(str)
 
     def __init__(self, app_controller: AppController):
+        """
+        Initializes the thread with the application controller.
+        """
         super().__init__()
         self.app_controller = app_controller
 
     def run(self):
+        """
+        Runs the manual upload process.
+        """
         try:
             self.app_controller.manual_upload()
         except Exception as e:

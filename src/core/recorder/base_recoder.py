@@ -22,7 +22,8 @@ class BaseRecorder(ABC):
         self.process: Optional[subprocess.Popen] = None
 
         # Common configurations
-        self.segment_duration: Optional[int] = self.config.get("segment_duration")
+        self.segment_duration: Optional[int] = self.config.get(
+            "segment_duration")
         self.device_name: str = self.config.get("device_name", "default")
 
         # Storage configuration
@@ -46,33 +47,31 @@ class BaseRecorder(ABC):
             return subprocess.PIPE, subprocess.PIPE
         return subprocess.DEVNULL, subprocess.DEVNULL
 
-    def start_recording(
-        self, device: str = "", output_path=""
-    ) -> Optional[subprocess.Popen]:
+    def start_recording(self,
+                        device: str = "",
+                        output_path="") -> Optional[subprocess.Popen]:
         stdout, stderr = self._get_process_pipes()
         cmd = self._build_command(device, output_path)
         cmd_str = " ".join(cmd)
         type = self.get_recorder_type()
         try:
-            logger.debug(f"Starting {self.get_recorder_type()} recording: {cmd_str}")
-            # 添加 Windows 特定的进程创建配置
+            logger.debug(
+                f"Starting {self.get_recorder_type()} recording: {cmd_str}")
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = subprocess.SW_HIDE
-            
+
             creation_flags = (
                 win32process.CREATE_NO_WINDOW |  # 不创建控制台窗口
-                win32con.DETACHED_PROCESS      # 分离进程
+                win32con.DETACHED_PROCESS  # 分离进程
             )
-            
-            self.process = subprocess.Popen(
-                cmd, 
-                stdout=stdout, 
-                stderr=stderr,
-                startupinfo=startupinfo,
-                creationflags=creation_flags
-            )
-            
+
+            self.process = subprocess.Popen(cmd,
+                                            stdout=stdout,
+                                            stderr=stderr,
+                                            startupinfo=startupinfo,
+                                            creationflags=creation_flags)
+
             if self.log_ffmpeg:
                 self._start_monitoring_ffmpeg_log(
                     self.process,
@@ -81,7 +80,8 @@ class BaseRecorder(ABC):
                 )
             return self.process
         except Exception as e:
-            raise logger.exception(f"{type} recording failed ({device}): {str(e)}")
+            raise logger.exception(
+                f"{type} recording failed ({device}): {str(e)}")
 
     def validate_segment_duration(self) -> Optional[int]:
         """Validate segment duration validity"""
@@ -101,9 +101,9 @@ class BaseRecorder(ABC):
                 return None
         return None
 
-    def _start_monitoring_ffmpeg_log(
-        self, process: subprocess.Popen, device_name: str, type: str
-    ) -> Optional[threading.Thread]:
+    def _start_monitoring_ffmpeg_log(self, process: subprocess.Popen,
+                                     device_name: str,
+                                     type: str) -> Optional[threading.Thread]:
         """Monitor FFmpeg process output"""
 
         def _monitor_ffmpeg_output() -> None:
@@ -139,7 +139,7 @@ class BaseRecorder(ABC):
     def _parse_output_path(self, cmd_args: List[str]) -> str:
         """Extract output path from command arguments"""
         for arg in reversed(cmd_args):
-            if arg.endswith((".mp4", ".wav")):
+            if arg.endswith((".mp4", ".mp3")):
                 return os.path.abspath(arg)
         return "Unknown path"
 
@@ -149,6 +149,10 @@ class BaseRecorder(ABC):
             import psutil  # type: ignore
 
             create_time = psutil.Process(process.pid).create_time()
-            return time.strftime("%H:%M:%S", time.gmtime(time.time() - create_time))
+            return time.strftime("%H:%M:%S",
+                                 time.gmtime(time.time() - create_time))
         except ImportError:
             return "Unknown time"
+
+    def get_local_path(self) -> str:
+        return self.local_path

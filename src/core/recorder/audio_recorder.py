@@ -21,36 +21,34 @@ class AudioRecorder(BaseRecorder):
         """Start audio recording session"""
         segment_duration = self.validate_segment_duration()
         clean_name = self._device_name_to_path(device)
-        output_template = self._get_ouput_template(os.path.join(folder, clean_name))
+
+        device_name = self.config.get_device_name()
+        date_str = time.strftime("%Y%m%d")
+        tmp_path = os.path.join(".tmp", device_name, date_str, "audio", clean_name)
+        os.makedirs(tmp_path, exist_ok=True)
+
+        output_template = self._get_ouput_template(tmp_path)
 
         cmd = [
             imageio_ffmpeg.get_ffmpeg_exe(),
-            "-loglevel",
-            "info",
+            "-loglevel", "info",
             "-y",
-            "-f",
-            "dshow",
-            "-i",
-            f"audio={device}",
-            "-ac",
-            str(self.channels),
-            "-ar",
-            str(self.sample_rate),
+            "-f", "dshow",
+            "-i", f"audio={device}",
+            "-ac", str(self.channels),
+            "-ar", str(self.sample_rate),
         ]
 
         if segment_duration:
             cmd += [
-                "-f",
-                "segment",
-                "-segment_time",
-                str(segment_duration),
-                "-strftime",
-                "1",
-                f"{output_template}.wav",
+                "-f", "segment",
+                "-segment_time", str(segment_duration),
+                "-strftime", "1",
+                f"{output_template}.mp3",
             ]
         else:
-            cmd.append(os.path.join(folder, f"{int(time.time())}.wav"))
-
+            cmd.append(os.path.join(tmp_path, f"{int(time.time())}.mp3"))
+        
         return cmd
 
     def get_recorder_type(self):

@@ -20,6 +20,7 @@ class AppController:
     """Main controller for the application"""
 
     def __init__(self):
+        """Initializes the AppController with necessary managers and flags."""
         self.recorder_manager: Optional[RecorderManager] = None
         self.local_file_manager: Optional[LocalFileManager] = None
         self.uploader_manager: Optional[UploaderManager] = None
@@ -33,6 +34,8 @@ class AppController:
         self.lock_monitor_thread: Optional[threading.Thread] = (
             None  # lock_monitor thread
         )
+        self._was_recording_before_lock = False
+        self._was_polling_before_lock = False
 
     def setup_config(self) -> None:
         """Initialize the configuration"""
@@ -62,6 +65,7 @@ class AppController:
             sys.exit(1)
 
     def setup(self):
+        """Sets up the application by initializing configuration and components."""
         if not self.config:
             self.setup_config()
         if not self.local_file_manager:
@@ -72,13 +76,14 @@ class AppController:
         logger.info("Starting recording...")
         self.is_recording = True
         self.recorder_manager.start_recording()
-
+        
     def stop_recording(self) -> None:
         """Stop recording"""
         logger.info("Stopping recording...")
         if self.recorder_manager:
             self.recorder_manager.stop_recording()
         self.is_recording = False
+        self.local_file_manager.move_all_tmp_files()
         logger.debug("All recording processes stopped")
 
     def start_polling(self) -> None:
@@ -103,6 +108,7 @@ class AppController:
         self.stop_recording()
         self.stop_polling()
         logger.debug("AppController: cleanup completed")
+
 
     def poll_and_sync(self) -> None:
         """Poll for new files and upload them"""
@@ -147,12 +153,18 @@ class AppController:
         self.is_locked = is_locked
         if is_locked:
             logger.info("Screen locked. Stopping recording and polling.")
+            self._was_recording_before_lock = self.is_recording
+            self._was_polling_before_lock = self.is_polling
             self.stop_recording()
             self.stop_polling()
         else:
             logger.info("Screen unlocked. Starting recording and polling.")
-            self.start_recording()
-            self.start_polling()
+            if self._was_recording_before_lock:
+                self.start_recording()
+            if self._was_polling_before_lock:
+                self.start_polling()
+            self._was_recording_before_lock = False
+            self._was_polling_before_lock = False
 
     def start_lock_monitor_thread(self) -> None:
         """Start screen lock monitoring."""
