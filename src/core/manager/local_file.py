@@ -26,6 +26,20 @@ class RecordingFileHandler(FileSystemEventHandler):
         self.processing_files = set()
         self.file_stable_time = 1  # File stable detection time (seconds)
 
+    def on_created(self, event):
+        """
+        Called when a file or directory is created.
+
+        This method is triggered when a file is created, and it checks if the
+        created file is a recording file (mp4 or mp3). If so, it moves all other files
+        in the same directory to the target directory.
+        """
+        if not event.is_directory and event.src_path.endswith(
+            (".mp4", ".mp3")):
+            directory = os.path.dirname(event.src_path)
+            self.manager.move_all_files_in_directory(
+                directory, exclude_file=event.src_path)
+
     def on_modified(self, event):
         """
         Called when a file or directory is modified.
@@ -34,34 +48,36 @@ class RecordingFileHandler(FileSystemEventHandler):
         modified file is a recording file (mp4 or mp3). If so, it starts a
         thread to check the file's stability.
         """
-        if not event.is_directory and event.src_path.endswith(
-            (".mp4", ".mp3")):
+        # 注释掉 on_modified 中的代码，因为移动文件的逻辑已移至 on_created
+        # if not event.is_directory and event.src_path.endswith(
+        #     (".mp4", ".mp3")):
 
-            if event.src_path not in self.processing_files:
-                self.processing_files.add(event.src_path)
-                threading.Thread(target=self._check_file_stable,
-                                 args=(event.src_path, )).start()
+        #     if event.src_path not in self.processing_files:
+        #         self.processing_files.add(event.src_path)
+        #         threading.Thread(target=self._check_file_stable,
+        #                          args=(event.src_path, )).start()
+        pass
 
-    def _check_file_stable(self, filepath):
-        """
-        Checks if a file has stopped being written to.
+    # def _check_file_stable(self, filepath):
+    #     """
+    #     Checks if a file has stopped being written to.
 
-        This method periodically checks the file size to determine if it has
-        stopped growing, indicating that the recording is complete.
-        """
-        try:
-            initial_size = os.path.getsize(filepath)
-            while True:
-                time.sleep(self.file_stable_time)
-                current_size = os.path.getsize(filepath)
-                if current_size == initial_size:
-                    self.manager.move_tmp_file(filepath)
-                    break
-                initial_size = current_size
-        except Exception as e:
-            logger.error(f"File monitoring error: {e}")
-        finally:
-            self.processing_files.discard(filepath)
+    #     This method periodically checks the file size to determine if it has
+    #     stopped growing, indicating that the recording is complete.
+    #     """
+    #     try:
+    #         initial_size = os.path.getsize(filepath)
+    #         while True:
+    #             time.sleep(self.file_stable_time)
+    #             current_size = os.path.getsize(filepath)
+    #             if current_size == initial_size:
+    #                 self.manager.move_tmp_file(filepath)
+    #                 break
+    #             initial_size = current_size
+    #     except Exception as e:
+    #         logger.error(f"File monitoring error: {e}")
+    #     finally:
+    #         self.processing_files.discard(filepath)
 
 
 class LocalFileManager:
@@ -160,6 +176,27 @@ class LocalFileManager:
                     f"Moved completed file: {filepath} -> {target_path}")
         except Exception as e:
             logger.error(f"Failed to move file: {e}")
+
+    def move_all_files_in_directory(self, directory, exclude_file=None):
+        """
+        Moves all files in the specified directory to their final locations,
+        excluding the specified file.
+        """
+        try:
+            for filename in os.listdir(directory):
+                file_path = os.path.join(directory, filename)
+                if os.path.isfile(file_path) and file_path != exclude_file:
+                    # Construct target path
+                    target_path = file_path.replace(
+                        ".tmp",
+                        self.config.get_storage_config()["local_path"])
+
+                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                    os.rename(file_path, target_path)
+                    logger.info(
+                        f"Moved completed file: {file_path} -> {target_path}")
+        except Exception as e:
+            logger.error(f"Failed to move files in directory: {e}")
 
     def _get_file_info(self, local_path: str) -> Dict:
         """
