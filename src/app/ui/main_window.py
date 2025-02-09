@@ -11,9 +11,10 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QCheckBox,
     QWidgetAction,
+    QSizeGrip,
 )
 
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, QPoint, QSize
 from src.app.ui.page.about import About
 from src.app.ui.page.config_editor import ConfigEditor
 from src.app.ui.page.file_data import FileData
@@ -24,6 +25,38 @@ from src.app.ui.custom_dialog import CustomDialog
 from PyQt5.QtGui import QIcon
 import os
 import sys
+
+
+class ResizableButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumSize(20, 20)  # 设置按钮的最小尺寸
+        self.dragging = False
+        self.drag_start_pos = QPoint()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.dragging = True
+            self.drag_start_pos = event.globalPos() - self.parent().pos()
+            # 如果父部件不是直接的父级，可能需要更复杂的计算
+            # self.drag_start_pos = event.globalPos() - self.mapToGlobal(self.pos())
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.dragging:
+            new_pos = event.globalPos() - self.drag_start_pos
+            # 限制窗口的最小尺寸
+            new_rect = QRect(self.parent().pos(), new_pos)
+            if new_rect.width() >= self.parent().minimumWidth() and \
+               new_rect.height() >= self.parent().minimumHeight():
+                self.parent().setGeometry(new_rect)
+
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.dragging = False
+        super().mouseReleaseEvent(event)
 
 
 class MainWindow(QMainWindow):
@@ -43,8 +76,8 @@ class MainWindow(QMainWindow):
         # Set resource paths
         self.resource_path = os.path.join(application_path, "resources")
 
-        # Remove window frame
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        # Remove window frame AND set stay-on-top
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
 
         self.setWindowTitle("Full Screen Tracer")
         self.setMinimumSize(800, 600)
@@ -62,8 +95,8 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Add custom title bar
-        title_bar = QWidget()
-        title_bar_layout = QHBoxLayout(title_bar)
+        self.title_bar = QWidget()
+        title_bar_layout = QHBoxLayout(self.title_bar)
         title_bar_layout.setContentsMargins(10, 5, 10, 5)
 
         # Add window title with icon
@@ -127,7 +160,7 @@ class MainWindow(QMainWindow):
         title_bar_layout.addWidget(close_button)
         title_bar_layout.addWidget(exit_button)
 
-        layout.addWidget(title_bar)
+        layout.addWidget(self.title_bar)
 
         # Add tabs container without exit button
         tabs_container = QWidget()
@@ -164,6 +197,34 @@ class MainWindow(QMainWindow):
         self._is_resizing = False
         self._resize_start_pos = None
         self._window_start_geometry = None
+
+        # Create QSizeGrip and add to layout
+        size_grip = QSizeGrip(self)
+        layout.addWidget(size_grip, 0, Qt.AlignBottom | Qt.AlignRight)
+
+        # 窗口拖动的起始位置
+        self._drag_pos = None
+
+    def showEvent(self, event):
+        """Override showEvent to center the window after it's shown."""
+        super().showEvent(event)
+        self.center_window()
+
+    def center_window(self):
+        """Centers the window on the screen."""
+        # Use availableGeometry to account for taskbars and other screen elements
+        screen = QApplication.primaryScreen().availableGeometry()
+        # OR, to center on a *specific* screen if you have multiple:
+        # screen = QApplication.screenAt(QCursor.pos()).availableGeometry()
+
+        # Get the window size.  Crucially, we do this *after* the window
+        # and its widgets are laid out, but *before* we show it.  This
+        # ensures we get the correct size.
+        size = self.size()  # Use self.size() instead of self.geometry()
+
+        x = (screen.width() - size.width()) // 2
+        y = (screen.height() - size.height()) // 2
+        self.move(x, y)
 
     def setup_system_tray(self):
         """Setup system tray icon and menu"""
@@ -267,26 +328,32 @@ class MainWindow(QMainWindow):
             QApplication.quit()
 
     def mousePressEvent(self, event):
-        """Handle mouse press for both dragging and resizing"""
+        """
+        Handle mouse press for both dragging and resizing.
+        Only allow dragging from the title bar.
+        """
         if event.button() == Qt.MouseButton.LeftButton:
             if self.isInResizeArea(event.pos()):
                 self._is_resizing = True
                 self._resize_start_pos = event.globalPos()
                 self._window_start_geometry = self.geometry()
-            else:
-                # Original window dragging code
+            elif self.title_bar.rect().contains(
+                    self.mapFromGlobal(event.globalPos())):  # 检查是否在标题栏区域
                 self._drag_pos = event.globalPos() - self.pos()
+            else:
+                self._drag_pos = None  # 不在标题栏，则不允许拖动
             event.accept()
 
     def mouseMoveEvent(self, event):
-        """Update cursor shape and handle move events"""
-        # Update cursor shape based on position
+        """
+        Update cursor shape and handle move events.
+        Only allow dragging if initiated from the title bar.
+        """
         if self.isInResizeArea(event.pos()):
             self.setCursor(Qt.CursorShape.SizeFDiagCursor)
         else:
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
-        # Handle actual move events
         if event.buttons() & Qt.MouseButton.LeftButton:
             if self._is_resizing:
                 delta = event.globalPos() - self._resize_start_pos
@@ -298,18 +365,18 @@ class MainWindow(QMainWindow):
                 new_height = max(new_height, self.minimumHeight())
 
                 self.setGeometry(
-                    new_geometry.x(), new_geometry.y(), new_width, new_height
-                )
-            else:
+                    new_geometry.x(), new_geometry.y(), new_width, new_height)
+            elif self._drag_pos:  # 只有当 _drag_pos 有值时才允许拖动
                 self.move(event.globalPos() - self._drag_pos)
             event.accept()
 
     def mouseReleaseEvent(self, event):
-        """Reset resize state when mouse is released"""
+        """Reset resize and drag states when mouse is released"""
         if event.button() == Qt.MouseButton.LeftButton:
             self._is_resizing = False
             self._resize_start_pos = None
             self._window_start_geometry = None
+            self._drag_pos = None  # 释放鼠标时重置 _drag_pos
         event.accept()
 
     def toggle_maximize(self):
@@ -318,3 +385,9 @@ class MainWindow(QMainWindow):
             self.showNormal()
         else:
             self.showMaximized()
+
+if __name__ == '__main__':
+    app = QApplication([])
+    window = MainWindow(None)  # Pass None or a mock AppController during testing
+    window.show()
+    app.exec_()

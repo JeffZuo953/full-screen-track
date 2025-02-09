@@ -29,7 +29,7 @@ class About(QMainWindow):
             </tr>
             <tr>
                 <td style="padding-right: 30px;">GitHub:</td>
-                <td><a href="https://github.com/JeffZuo953/full-screen-track">https://github.com/JeffZuo953/full-screen-track</a></td>
+                <td>https://github.com/JeffZuo953/full-screen-track</td>
             </tr>
         </table>
         """
