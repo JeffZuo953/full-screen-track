@@ -1,3 +1,5 @@
+> F!U! MicroSoft! The new recall function killed the game, danm
+
 [🌎 English](README.md) | [🀄 简体中文](README_zh.md)
 
 # 🤔 Have you encountered these situations?
